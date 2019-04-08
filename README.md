@@ -51,8 +51,8 @@ Next, we're going to intercept the running container and start manipulating it b
 > docker exec -i myprogram-app powershell
 
 While in the powershell, execute the commands contained in Dockerfile.manual to deploy the MyProgram web application.  While the above powershell is still open, open a new Powershell session in a new window.  Then perform the following commands to stop the docker container and then save the state of the container into a new docker image, called myprogram:
-> docker ps  // obtain the <container_id> of the running docker container 
-> docker stop <container_id> 
+> docker ps  // obtain the <container_id> of the running docker container <br/>
+> docker stop <container_id> <br/>
 > docker commit <container_id> myprogram
 
 At the end of this, you will have a working docker image in your local docker registry called myprogram
