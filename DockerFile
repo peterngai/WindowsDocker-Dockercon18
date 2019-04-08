@@ -1,0 +1,133 @@
+FROM microsoft/iis:latest
+
+SHELL ["powershell"]
+
+WORKDIR 'C:\\'
+RUN Import-Module ServerManager
+
+#####
+# Install 3rd party libraries
+# 
+COPY 3rdPartyLibs 'C:\Windows\System32'
+
+# just a visual check
+RUN dir C:\Windows\System32\icu*
+
+#####
+# Install prerequisite libraries
+#
+COPY Prereq 'C:\Prereq'
+RUN dir \Prereq
+RUN Start-Process \Prereq\SQLSysClrTypes.msi -ArgumentList '/qn' -Wait ; \
+    Start-Process \Prereq\vc_redist.x86.exe -ArgumentList '/q' -Wait ; \
+    Start-Process \Prereq\vc_redist.x64.exe -ArgumentList '/q' -Wait ; \
+    Start-Process \Prereq\vcredist_x86.exe -ArgumentList '/q' -Wait ; \
+    Start-Process \Prereq\vcredist_x64.exe -ArgumentList '/q' -Wait
+
+#####
+# Confirmation of 3rd party and prereq libs
+#
+RUN dir c:\windows\assembly\GAC_MSIL ; \
+    Get-ItemProperty HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\* | Select-Object DisplayName, DisplayVersion
+
+#####
+# Install Windows IIS and Web featuresets
+#
+
+# the following list of components may vary according to your programmatic dependencies
+# this is a sprinkling
+RUN Install-WindowsFeature Web-AppInit ; \
+    Get-windowsFeature -Name NET-WCF-TCP-PortShar* | Install-WindowsFeature ; \
+    Install-WindowsFeature Web-Server ; \
+    Install-WindowsFeature WAS ; \
+    Get-windowsFeature -Name NET-WCF-HTTP-Activat* | Install-WindowsFeature ; \
+    Get-windowsFeature -Name NET-WCF-Pipe-Activat* | Install-WindowsFeature ; \
+    Get-windowsFeature -Name NET-WCF-TCP-Activat* | Install-WindowsFeature ; \
+    Install-WindowsFeature FileAndStorage-Services ; \
+    Install-WindowsFeature Web-WebServer ; \
+    Install-WindowsFeature Web-Common-Http ; \
+    Install-WindowsFeature Web-Default-Doc ; \
+    Install-WindowsFeature Web-Dir-Browsing ; \
+    Install-WindowsFeature Web-Http-Errors ; \
+    Install-WindowsFeature Web-Static-Content ; \
+    Install-WindowsFeature Web-Http-Redirect ; \
+    Install-WindowsFeature Web-Health ; \
+    Install-WindowsFeature Web-Http-Logging ; \
+    Install-WindowsFeature Web-Log-Libraries ; \
+    Install-WindowsFeature Web-ODBC-Logging ; \
+    Install-WindowsFeature Web-Request-Monitor ; \
+    Install-WindowsFeature Web-Http-Tracing ; \
+    Install-WindowsFeature Web-Performance ; \
+    Install-WindowsFeature Web-Stat-Compression ; \
+    Install-WindowsFeature Web-Dyn-Compression ; \
+    Install-WindowsFeature Web-Security ; \
+    Install-WindowsFeature Web-Filtering ; \
+    Install-WindowsFeature Web-Basic-Auth ; \
+    Install-WindowsFeature Web-Client-Auth ; \
+    Install-WindowsFeature Web-Digest-Auth ; \
+    Install-WindowsFeature Web-Cert-Auth ; \
+    Install-WindowsFeature Web-IP-Security ; \
+    Install-WindowsFeature Web-Url-Auth ; \
+    Install-WindowsFeature Web-Windows-Auth ; \
+    Install-WindowsFeature Web-App-Dev ; \
+    Install-WindowsFeature Web-Net-Ext45 ; \
+    Install-WindowsFeature Web-AppInit ; \
+    Install-WindowsFeature Web-ASP ; \
+    Install-WindowsFeature Web-Asp-Net45 ; \
+    Install-WindowsFeature Web-ISAPI-Ext ; \
+    Install-WindowsFeature Web-ISAPI-Filter ; \
+    Install-WindowsFeature Web-Mgmt-Tools ; \
+    Install-WindowsFeature Web-Mgmt-Compat ; \
+    Install-WindowsFeature Web-Metabase ; \
+    Install-WindowsFeature Web-Lgcy-Scripting ; \
+    Install-WindowsFeature Web-WMI ; \
+    Install-WindowsFeature Web-Scripting-Tools ; \
+    Install-WindowsFeature Web-Mgmt-Service ; \
+    Install-WindowsFeature NET-Framework-45-Core ; \
+    Install-WindowsFeature NET-Framework-45-ASPNET ; \
+    Install-WindowsFeature RSAT ; \
+    Install-WindowsFeature RSAT-Feature-Tools ; \
+    Install-WindowsFeature FS-SMB1 ; \
+    Install-WindowsFeature PowerShellRoot ; \
+    Install-WindowsFeature PowerShell ; \
+    Install-WindowsFeature WAS-Process-Model ; \
+    Install-WindowsFeature WAS-Config-APIs ; \
+    Install-WindowsFeature WoW64-Support
+
+#####
+# Copy over Programmatic files
+#
+#COPY ProgramData-MyProgram 'C:\ProgramData\MyProgram' # will be mapped instead
+COPY ProgramFiles-MyProgram 'C:\MyProgram'
+
+#####
+# Set up web application
+#
+
+#
+# ---- NOTE that the following sections have been commented out!! Reason being is that
+# ---- docker build did not actually perform the following steps.  Please see the next 
+# ---- file, which lists the commands to perform while intercepting the running container
+# ---- to manually register the web application in the container
+#
+# ---- Also note that this may have been addressed in the upcoming 1803 releases of 
+# ---- windows server and newer Docker releases
+#
+
+## New Webpool
+#RUN Import-Module ServerManager ; \
+#    Install-WindowsFeature Web-Scripting-Tools ; \
+#    Import-Module WebAdministration
+#RUN Import-Module WebAdministration ; \
+#    Import-Module IISAdministration
+#RUN cd IIS:\AppPools\ ;
+
+#RUN Get-ChildItem -Path 'IIS:\AppPools'
+#RUN New-Item 'IIS:\AppPools\MyProgram'
+#RUN New-Item 'IIS:\Sites\Default Web Site\MyProgram' -physicalPath 'C:\MyProgram\ApplicationServer' -Type Application -ApplicationPool 'MyProgram'
+#RUN New-Item 'IIS:\Sites\Default Web Site\MyProgram\api' -physicalPath 'C:\MyProgram\ApplicationServer\api' -Type Application -ApplicationPool 'MyProgram'
+#RUN New-Item 'IIS:\Sites\Default Web Site\MyProgram\i18n' -physicalPath 'C:\MyProgram\ApplicationServer\i18n' -Type VirtualDirectory
+#RUN New-Item 'IIS:\Sites\Default Web Site\MyProgram\i18n\resources' -physicalPath 'C:\ProgramData\MyProgram\Translations\WebPages\i18n\resources' -Type VirtualDirectory
+
+EXPOSE 80
+
